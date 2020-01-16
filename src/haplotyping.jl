@@ -119,11 +119,11 @@ function phase(
     @inbounds for i in 1:people, w in 2:windows
 
         # compute union of 2 redundant haplotype sets
-        pool .= hapset[i].strand1[w] .| hapset[i].strand2[w]   
+        pool .= hapset[i].strand1[w] .| hapset[i].strand2[w] 
 
-        # perform intersection 
-        chain_next[1] .= pool .& hapset[i].strand1[w]
-        chain_next[2] .= pool .& hapset[i].strand2[w]
+        # intersect all surviving haplotypes with next window (i.e. pool)
+        chain_next[1] .= haplo_chain[1][i] .& pool
+        chain_next[2] .= haplo_chain[2][i] .& pool
 
         # strand 1 becomes empty
         if sum(chain_next[1]) == 0
@@ -132,7 +132,7 @@ function phase(
                 hapset[i].strand1[ww] .= haplo_chain[1][i]
             end
 
-            # reset counters and storage
+            # reset surviving haplotypes and counter
             haplo_chain[1][i] .= hapset[i].strand1[w]
             window_span[1][i] = 1
         else
@@ -147,7 +147,7 @@ function phase(
                 hapset[i].strand2[ww] .= haplo_chain[2][i]
             end
 
-            # reset counters and storage
+            # reset surviving haplotypes and counter
             haplo_chain[2][i] .= hapset[i].strand2[w]
             window_span[2][i] = 1
         else
