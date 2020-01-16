@@ -108,23 +108,24 @@ function phase(
 
     # allocate working arrays
     phase = [HaplotypeMosaicPair(snps) for i in 1:people]
-    haplo_chain = ([copy(hapset[i].strand1[1]) for i in 1:people], [copy(hapset[1].strand2[1]) for i in 1:people])
-    chain_next  = (BitVector(undef, haplotypes), BitVector(undef, haplotypes))
-    window_span = (ones(Int, people), ones(Int, people))
+    haplo_chain = ([copy(hapset[i].strand1[1]) for i in 1:people], 
+                   [copy(hapset[1].strand2[1]) for i in 1:people])             # all surviving haplotypes until previous breakpoint for each person 
+    chain_next  = (BitVector(undef, haplotypes), BitVector(undef, haplotypes)) # temp vector for computing intersection with next window
+    window_span = (ones(Int, people), ones(Int, people))                       # keeps track of how many windows until previous breakpoint
+    pool = BitVector(undef, haplotypes) # union of redundant haplotypes for next window
 
     # TODO: parallel computing
     # begin intersecting haplotypes window by window 
     @inbounds for i in 1:people, w in 2:windows
 
-        # decide whether to cross over based on the larger intersection
-        chain_next[1] .= haplo_chain[1][i] .& hapset[i].strand1[w] # not crossing over
-        chain_next[2] .= haplo_chain[1][i] .& hapset[i].strand2[w] # crossing over
-        if sum(chain_next[1]) < sum(chain_next[2])
-            hapset[i].strand1[w], hapset[i].strand2[w] = hapset[i].strand2[w], hapset[i].strand1[w]
-        end        
+        # compute union of 2 redundant haplotype sets
+        pool .= hapset[i].strand1[w] .| hapset[i].strand2[w]   
 
-        # strand 1 
-        chain_next[1] .= haplo_chain[1][i] .& hapset[i].strand1[w]
+        # perform intersection 
+        chain_next[1] .= pool .& hapset[i].strand1[w]
+        chain_next[2] .= pool .& hapset[i].strand2[w]
+
+        # strand 1 becomes empty
         if sum(chain_next[1]) == 0
             # delete all nonmatching haplotypes in previous windows
             for ww in (w - window_span[1][i]):(w - 1)
@@ -139,8 +140,7 @@ function phase(
             window_span[1][i] += 1
         end
 
-        # strand 2
-        chain_next[2] .= haplo_chain[2][i] .& hapset[i].strand2[w]
+        # strand 2 becomes empty
         if sum(chain_next[2]) == 0
             # delete all nonmatching haplotypes in previous windows
             for ww in (w - window_span[2][i]):(w - 1)
