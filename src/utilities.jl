@@ -73,7 +73,7 @@ redundant haplotypes that matches the optimal haplotypes in each window for pers
 function compute_optimal_halotype_set(
     X::AbstractMatrix{Union{Missing, T}},
     H::AbstractMatrix{T};
-    width::Int    = 128,
+    width::Int    = 400,
     verbose::Bool = true,
     Xtrue::Union{AbstractMatrix, Nothing} = nothing # for testing
     ) where T <: Real
@@ -283,8 +283,8 @@ function haplopair(
     d        = size(H, 2)
     M        = zeros(eltype(H), d, d)
     N        = zeros(promote_type(eltype(H), eltype(X)), n, d)
-    happairs = [Tuple{Int, Int}[] for i in 1:n]
     hapscore = zeros(eltype(N), n)
+    happairs = [Tuple{Int, Int}[] for i in 1:n]
     haplopair!(X, H, M, N, happairs, hapscore)
 
     return happairs, hapscore

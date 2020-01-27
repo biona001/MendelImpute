@@ -695,7 +695,7 @@ hapset, phase = phase2(Xm, H, width=64);  #error = 0.019300418, 215.47MB, 3.070s
 hapset, phase = phase2(Xm, H, width=700); #error = 0.003373971, 48.53MB, 4.880s, 205942 alloc
 
 # calculate error rate
-impute2!(Xm, H, phase)
+impute2!(Xm, H, ph)
 missing_idx    = ismissing.(Xm_original)
 total_missing  = sum(missing_idx)
 actual_missing_values  = convert(Vector{Int64}, X[missing_idx])  #true values of missing entries
@@ -846,3 +846,57 @@ using MendelImpute
 H = simulate_markov_haplotypes(10000, 500)
 X = simulate_genotypes(H, 100)
 X2 = simulate_genotypes2(H, people=100)
+
+
+
+
+
+# optimize happair!
+
+using Revise
+using MendelImpute
+using DelimitedFiles
+using LinearAlgebra
+using BenchmarkTools
+using Random
+using ElasticArrays
+using GeneticVariation
+using VCFTools
+
+cd("/Users/biona001/.julia/dev/MendelImpute/data")
+
+rawdata = readdlm("AFRped_geno.txt", ',', Float32);
+people = 665;
+X = copy(Transpose(rawdata[1:people, 1:(end - 1)]));
+function create_hap(x)
+    n, p = size(x)
+    h = one(eltype(x))
+    for j in 1:p, i in 1:n
+        if x[i, j] != 0
+            x[i, j] -= h
+        end
+    end
+    return copy(Transpose(x))
+end
+H = create_hap(rawdata[(people + 1):end, 1:(end - 1)]);
+
+Random.seed!(123)
+missingprop = 0.1
+p, n = size(X)
+X2 = Matrix{Union{Missing, eltype(X)}}(X)
+Xm = ifelse.(rand(eltype(X), p, n) .< missingprop, missing, X2)
+Xm_original = copy(Xm)
+width = 64
+windows = floor(Int, p / width)
+
+
+X_test = X[1:1200, :]
+H_test = H[1:1200, :]
+@benchmark happairs, hapscore = haplopair(X_test, H_test) #3.93 MiB, 195.237 ms
+
+using ProfileView
+@profview haplopair(X_test, H_test) 
+@profview haplopair(X_test, H_test)
+
+
+
