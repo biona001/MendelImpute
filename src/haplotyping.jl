@@ -93,7 +93,7 @@ function phase(
     width::Int    = 400,
     verbose::Bool = true,
     Xtrue::Union{AbstractMatrix, Nothing} = nothing, # for testing
-    fast_method::Bool = false
+    fast_method::Bool = true
     ) where T <: Real
 
     # declare some constants
@@ -180,8 +180,8 @@ function phase(
 
     # phase window 1
     for i in 1:people
-        hap1 = findfirst(hapset[i].strand1[1]) :: Int64
-        hap2 = findfirst(hapset[i].strand2[1]) :: Int64
+        hap1 = something(findfirst(hapset[i].strand1[1]))
+        hap2 = something(findfirst(hapset[i].strand2[1]))
         push!(phase[i].strand1.start, 1)
         push!(phase[i].strand1.haplotypelabel, hap1)
         push!(phase[i].strand2.start, 1)
@@ -200,10 +200,10 @@ function phase(
             s1_prev = phase[i].strand1.haplotypelabel[end]
             s2_prev = phase[i].strand2.haplotypelabel[end]
 
-            # search breakpoints when choosing first pair
-            s1_next = findfirst(hapset[i].strand1[w]) :: Int64
-            s2_next = findfirst(hapset[i].strand2[w]) :: Int64
-            bkpt, err_optim = search_breakpoint(Xi, Hi, (s1_prev, s1_next), (s2_prev, s2_next))
+            # search breakpoints when choosing first pair 
+            s1_next = something(findfirst(hapset[i].strand1[w]))
+            s2_next = something(findfirst(hapset[i].strand2[w]))
+            bkpt, err_optim = search_breakpoint(Xi, Hi, (s1_prev, s1_next), (s2_prev, s2_next)) # this takes 50% of total compute time
             # record info into phase
             push!(phase[i].strand1.start, (w - 2) * width + 1 + bkpt[1])
             push!(phase[i].strand2.start, (w - 2) * width + 1 + bkpt[2])
@@ -211,8 +211,8 @@ function phase(
             push!(phase[i].strand2.haplotypelabel, s2_next)
 
             # search breakpoints among all possible haplotypes (this improves error slightly but quite slow)
-            # s1_win_next = findall(hapset[i].strand1[w])
-            # s2_win_next = findall(hapset[i].strand2[w])
+            # s1_next = something(findfirst(hapset[i].strand1[w]))
+            # s2_next = something(findfirst(hapset[i].strand2[w]))
             # best_bktp = (0, 0)
             # best_err  = typemax(Int)
             # best_s1_next = 0
@@ -232,9 +232,9 @@ function phase(
             Hi = view(H, ((w - 2) * width + 1):(w * width), :)
             if sum(strand1_intersect) == 0
                 # search strand1 breakpoints
-                # s2 = findfirst(hapset[i].strand2[w]) :: Int64
+                # s2 = something(findfirst(hapset[i].strand2[w]))
                 # s1_prev = phase[i].strand1.haplotypelabel[end]
-                # s1_next = findfirst(hapset[i].strand1[w]) :: Int64
+                # s1_next = something(findfirst(hapset[i].strand1[w]))
                 # bkpt, err_optim = search_breakpoint(Xi, Hi, s2, (s1_prev, s1_next))
                 # # record info into phase
                 # push!(phase[i].strand1.start, (w - 2) * width + 1 + bkpt)
@@ -260,9 +260,9 @@ function phase(
 
             if sum(strand2_intersect) == 0
                 # search strand2 breakpoints
-                # s1 = findfirst(hapset[i].strand1[w]) :: Int64
+                # s1 = something(findfirst(hapset[i].strand1[w]))
                 # s2_prev = phase[i].strand2.haplotypelabel[end]
-                # s2_next = findfirst(hapset[i].strand2[w]) :: Int64
+                # s2_next = something(findfirst(hapset[i].strand2[w]))
                 # bkpt, err_optim = search_breakpoint(Xi, Hi, s1, (s2_prev, s2_next))
                 # # record info into phase
                 # push!(phase[i].strand2.start, (w - 2) * width + 1 + bkpt)
