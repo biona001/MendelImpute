@@ -367,7 +367,7 @@ function update_phase!(ph::HaplotypeMosaic, compressed_Hunique::CompressedHaplot
     return nothing
 end
 
-function Base.intersect!(c::Set{<:Integer}, a::Set{<:Integer}, b::Set{<:Integer})
+function Base.intersect!(c::AbstractSet{<:Integer}, a::AbstractSet{<:Integer}, b::AbstractSet{<:Integer})
     empty!(c)
     for x in a
         x in b && push!(c, x)
@@ -395,12 +395,12 @@ function phase_fast!(
 
     # allocate working arrays
     haplo_chain = ([copy(hapset[i].strand1[1]) for i in 1:people], [copy(hapset[i].strand2[1]) for i in 1:people])
-    chain_next  = (Set{Int32}(), Set{Int32}())
+    chain_next  = (BitSet(), BitSet())
     window_span = (ones(Int, people), ones(Int, people))
     pmeter      = Progress(people, 5, "Intersecting haplotypes...")
     sizehint!(chain_next[1], haplotypes)
     sizehint!(chain_next[2], haplotypes)
-    
+
     # begin intersecting haplotypes window by window
     @inbounds for i in 1:people
         for w in 2:windows

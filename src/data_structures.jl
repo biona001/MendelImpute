@@ -60,12 +60,12 @@ Data structure for storing all haplotypes that match the optimal haplotype in ea
 + strand1[w] stores a BitVector for window `w`. length(strand1[w]) = number of haplotypes. Entries of this BitVector is 1 if that haplotype matches the optimal haplotype.
 """
 struct OptimalHaplotypeSet
-    strand1::Vector{Set{Int32}}
-    strand2::Vector{Set{Int32}}
+    strand1::Vector{BitSet}
+    strand2::Vector{BitSet}
 end
-OptimalHaplotypeSet(windows::Int) = OptimalHaplotypeSet([Set{Int32}() for i in 1:windows], [Set{Int32}() for i in 1:windows])
+OptimalHaplotypeSet(windows::Int) = OptimalHaplotypeSet([BitSet() for i in 1:windows], [BitSet() for i in 1:windows])
 
-function findsmallest(x::Set{<:Integer})
+function findsmallest(x::AbstractSet{<:Integer})
     length(x) == 0 && return nothing
     s = first(x)
     for i in x
