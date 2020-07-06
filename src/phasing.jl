@@ -367,6 +367,14 @@ function update_phase!(ph::HaplotypeMosaic, compressed_Hunique::CompressedHaplot
     return nothing
 end
 
+function Base.intersect!(c::Set{<:Integer}, a::Set{<:Integer}, b::Set{<:Integer})
+    empty!(c)
+    for x in a
+        x in b && push!(c, x)
+    end
+    return nothing
+end
+
 function phase_fast!(
     ph::Vector{HaplotypeMosaicPair},
     X::AbstractMatrix{Union{Missing, T}},
@@ -390,7 +398,9 @@ function phase_fast!(
     chain_next  = (Set{Int32}(), Set{Int32}())
     window_span = (ones(Int, people), ones(Int, people))
     pmeter      = Progress(people, 5, "Intersecting haplotypes...")
-
+    sizehint!(chain_next[1], haplotypes)
+    sizehint!(chain_next[2], haplotypes)
+    
     # begin intersecting haplotypes window by window
     @inbounds for i in 1:people
         for w in 2:windows
@@ -399,7 +409,7 @@ function phase_fast!(
             # |   |  or    X
             # C   D      C   D
             intersect!(chain_next[1], haplo_chain[1][i], hapset[i].strand1[w]) # not crossing over
-            intersect!(chain_next[2], haplo_chain[2][i], hapset[i].strand2[w]) # crossing over
+            intersect!(chain_next[2], haplo_chain[1][i], hapset[i].strand2[w]) # crossing over
             AC = length(chain_next[1])
             AD = length(chain_next[2])
             intersect!(chain_next[1], haplo_chain[2][i], hapset[i].strand1[w]) # crossing over
@@ -418,7 +428,7 @@ function phase_fast!(
             if length(chain_next[1]) == 0
                 # delete all nonmatching haplotypes in previous windows
                 for ww in (w - window_span[1][i]):(w - 1)
-                    intersect!(hapset[i].strand1[ww], haplo_chain[1][i])
+                    copy!(hapset[i].strand1[ww], haplo_chain[1][i])
                 end
 
                 # reset counters and storage
