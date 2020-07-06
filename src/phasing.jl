@@ -92,7 +92,7 @@ function phase(
         redundant_haplotypes = [[Tuple{Int32, Int32}[] for i in 1:windows] for j in 1:people]
         [[sizehint!(redundant_haplotypes[j][i], 1000) for i in 1:windows] for j in 1:people] # don't save >1000 redundant happairs
     else
-        redundant_haplotypes = [OptimalHaplotypeSet(windows, nhaplotypes(compressed_Hunique)) for i in 1:people]
+        redundant_haplotypes = [OptimalHaplotypeSet(windows) for i in 1:people]
     end
     num_unique_haps = zeros(Int, Threads.nthreads())
     timers = [zeros(5) for _ in 1:Threads.nthreads()]
@@ -387,7 +387,7 @@ function phase_fast!(
 
     # allocate working arrays
     haplo_chain = ([copy(hapset[i].strand1[1]) for i in 1:people], [copy(hapset[i].strand2[1]) for i in 1:people])
-    chain_next  = (BitVector(undef, haplotypes), BitVector(undef, haplotypes))
+    chain_next  = (Set{Int32}(), Set{Int32}())
     window_span = (ones(Int, people), ones(Int, people))
     pmeter      = Progress(people, 5, "Intersecting haplotypes...")
 
@@ -398,34 +398,34 @@ function phase_fast!(
             # A   B      A   B
             # |   |  or    X
             # C   D      C   D
-            chain_next[1] .= haplo_chain[1][i] .& hapset[i].strand1[w] # not crossing over
-            chain_next[2] .= haplo_chain[1][i] .& hapset[i].strand2[w] # crossing over
-            AC = sum(chain_next[1])
-            AD = sum(chain_next[2])
-            chain_next[1] .= haplo_chain[2][i] .& hapset[i].strand1[w] # crossing over
-            chain_next[2] .= haplo_chain[2][i] .& hapset[i].strand2[w] # not crossing over
-            BC = sum(chain_next[1])
-            BD = sum(chain_next[2])
+            intersect!(chain_next[1], haplo_chain[1][i], hapset[i].strand1[w]) # not crossing over
+            intersect!(chain_next[2], haplo_chain[2][i], hapset[i].strand2[w]) # crossing over
+            AC = length(chain_next[1])
+            AD = length(chain_next[2])
+            intersect!(chain_next[1], haplo_chain[2][i], hapset[i].strand1[w]) # crossing over
+            intersect!(chain_next[2], haplo_chain[2][i], hapset[i].strand2[w]) # not crossing over
+            BC = length(chain_next[1])
+            BD = length(chain_next[2])
             if AC + BD < AD + BC
                 hapset[i].strand1[w], hapset[i].strand2[w] = hapset[i].strand2[w], hapset[i].strand1[w]
             end
 
             # intersect all surviving haplotypes with next window
-            chain_next[1] .= haplo_chain[1][i] .& hapset[i].strand1[w]
-            chain_next[2] .= haplo_chain[2][i] .& hapset[i].strand2[w]
+            intersect!(chain_next[1], haplo_chain[1][i], hapset[i].strand1[w])
+            intersect!(chain_next[2], haplo_chain[2][i], hapset[i].strand2[w])
 
             # strand 1 becomes empty
-            if sum(chain_next[1]) == 0
+            if length(chain_next[1]) == 0
                 # delete all nonmatching haplotypes in previous windows
                 for ww in (w - window_span[1][i]):(w - 1)
-                    hapset[i].strand1[ww] .= haplo_chain[1][i]
+                    copy!(hapset[i].strand1[ww], haplo_chain[1][i])
                 end
 
                 # reset counters and storage
-                haplo_chain[1][i] .= hapset[i].strand1[w]
+                copy!(haplo_chain[1][i], hapset[i].strand1[w])
                 window_span[1][i] = 1
             else
-                haplo_chain[1][i] .= chain_next[1]
+                copy!(haplo_chain[1][i], chain_next[1])
                 window_span[1][i] += 1
             end
 
@@ -433,14 +433,14 @@ function phase_fast!(
             if sum(chain_next[2]) == 0
                 # delete all nonmatching haplotypes in previous windows
                 for ww in (w - window_span[2][i]):(w - 1)
-                    hapset[i].strand2[ww] .= haplo_chain[2][i]
+                    copy!(hapset[i].strand2[ww], haplo_chain[2][i])
                 end
 
                 # reset counters and storage
-                haplo_chain[2][i] .= hapset[i].strand2[w]
+                copy!(haplo_chain[2][i], hapset[i].strand2[w])
                 window_span[2][i] = 1
             else
-                haplo_chain[2][i] .= chain_next[2]
+                copy!(haplo_chain[2][i], chain_next[2])
                 window_span[2][i] += 1
             end
         end
@@ -450,11 +450,11 @@ function phase_fast!(
     # get rid of redundant haplotypes in last few windows separately, since intersection may not become empty
     for i in 1:people
         for ww in (windows - window_span[1][i] + 1):windows
-            hapset[i].strand1[ww] .= haplo_chain[1][i]
+            copy!(hapset[i].strand1[ww], haplo_chain[1][i])
         end
 
         for ww in (windows - window_span[2][i] + 1):windows
-            hapset[i].strand2[ww] .= haplo_chain[2][i]
+            copy!(hapset[i].strand2[ww], haplo_chain[2][i])
         end
     end
 
@@ -467,8 +467,8 @@ function phase_fast!(
         id = Threads.threadid()
 
         # phase first window
-        hap1 = something(findfirst(hapset[i].strand1[1])) # complete idx
-        hap2 = something(findfirst(hapset[i].strand2[1])) # complete idx
+        hap1 = something(first(hapset[i].strand1[1])) # complete idx
+        hap2 = something(first(hapset[i].strand2[1])) # complete idx
         h1 = complete_idx_to_unique_all_idx(hap1, 1, compressed_Hunique) #unique haplotype idx in window 1
         h2 = complete_idx_to_unique_all_idx(hap2, 1, compressed_Hunique) #unique haplotype idx in window 1
         push!(ph[i].strand1.start, 1 + chunk_offset)
@@ -486,10 +486,10 @@ function phase_fast!(
             Xwi = view(X, Xwi_start:Xwi_end, i)
 
             # let first surviving haplotype be phase
-            hap1_prev = something(findfirst(hapset[i].strand1[w - 1]))
-            hap2_prev = something(findfirst(hapset[i].strand2[w - 1]))
-            hap1_curr = something(findfirst(hapset[i].strand1[w]))
-            hap2_curr = something(findfirst(hapset[i].strand2[w]))
+            hap1_prev = something(first(hapset[i].strand1[w - 1]))
+            hap2_prev = something(first(hapset[i].strand2[w - 1]))
+            hap1_curr = something(first(hapset[i].strand1[w]))
+            hap2_curr = something(first(hapset[i].strand2[w]))
 
             # find optimal breakpoint if there is one
             _, bkpts = continue_haplotype(Xwi, compressed_Hunique, 

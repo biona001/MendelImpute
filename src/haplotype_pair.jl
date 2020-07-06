@@ -43,14 +43,8 @@ function compute_redundant_haplotypes!(
             h2_set = get(Hunique.CW_typed[window].hapmap, Hj_idx, Hj_idx)
 
             # record matching haplotypes into bitvector
-            redunhaps_bitvec1 = redundant_haplotypes[k].strand1[window]
-            redunhaps_bitvec2 = redundant_haplotypes[k].strand2[window]
-            for i in h1_set
-                redunhaps_bitvec1[i] = true
-            end
-            for i in h2_set
-                redunhaps_bitvec2[i] = true
-            end
+            redundant_haplotypes[k].strand1[window] = Set{Int32}(h1_set)
+            redundant_haplotypes[k].strand2[window] = Set{Int32}(h2_set)
         end
     end
 
