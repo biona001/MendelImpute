@@ -64,3 +64,14 @@ struct OptimalHaplotypeSet
     strand2::Vector{Set{Int32}}
 end
 OptimalHaplotypeSet(windows::Int) = OptimalHaplotypeSet([Set{Int32}() for i in 1:windows], [Set{Int32}() for i in 1:windows])
+
+function findsmallest(x::Set{<:Integer})
+    length(x) == 0 && return nothing
+    s = first(x)
+    for i in x
+        if i < s
+            s = i
+        end
+    end
+    return s
+end

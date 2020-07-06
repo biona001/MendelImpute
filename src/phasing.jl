@@ -418,7 +418,7 @@ function phase_fast!(
             if length(chain_next[1]) == 0
                 # delete all nonmatching haplotypes in previous windows
                 for ww in (w - window_span[1][i]):(w - 1)
-                    copy!(hapset[i].strand1[ww], haplo_chain[1][i])
+                    intersect!(hapset[i].strand1[ww], haplo_chain[1][i])
                 end
 
                 # reset counters and storage
@@ -433,7 +433,7 @@ function phase_fast!(
             if sum(chain_next[2]) == 0
                 # delete all nonmatching haplotypes in previous windows
                 for ww in (w - window_span[2][i]):(w - 1)
-                    copy!(hapset[i].strand2[ww], haplo_chain[2][i])
+                    intersect!(hapset[i].strand2[ww], haplo_chain[2][i])
                 end
 
                 # reset counters and storage
@@ -450,11 +450,11 @@ function phase_fast!(
     # get rid of redundant haplotypes in last few windows separately, since intersection may not become empty
     for i in 1:people
         for ww in (windows - window_span[1][i] + 1):windows
-            copy!(hapset[i].strand1[ww], haplo_chain[1][i])
+            intersect!(hapset[i].strand1[ww], haplo_chain[1][i])
         end
 
         for ww in (windows - window_span[2][i] + 1):windows
-            copy!(hapset[i].strand2[ww], haplo_chain[2][i])
+            intersect!(hapset[i].strand2[ww], haplo_chain[2][i])
         end
     end
 
@@ -467,8 +467,8 @@ function phase_fast!(
         id = Threads.threadid()
 
         # phase first window
-        hap1 = something(first(hapset[i].strand1[1])) # complete idx
-        hap2 = something(first(hapset[i].strand2[1])) # complete idx
+        hap1 = something(findsmallest(hapset[i].strand1[1])) # complete idx
+        hap2 = something(findsmallest(hapset[i].strand2[1])) # complete idx
         h1 = complete_idx_to_unique_all_idx(hap1, 1, compressed_Hunique) #unique haplotype idx in window 1
         h2 = complete_idx_to_unique_all_idx(hap2, 1, compressed_Hunique) #unique haplotype idx in window 1
         push!(ph[i].strand1.start, 1 + chunk_offset)
@@ -486,10 +486,10 @@ function phase_fast!(
             Xwi = view(X, Xwi_start:Xwi_end, i)
 
             # let first surviving haplotype be phase
-            hap1_prev = something(first(hapset[i].strand1[w - 1]))
-            hap2_prev = something(first(hapset[i].strand2[w - 1]))
-            hap1_curr = something(first(hapset[i].strand1[w]))
-            hap2_curr = something(first(hapset[i].strand2[w]))
+            hap1_prev = something(findsmallest(hapset[i].strand1[w - 1]))
+            hap2_prev = something(findsmallest(hapset[i].strand2[w - 1]))
+            hap1_curr = something(findsmallest(hapset[i].strand1[w]))
+            hap2_curr = something(findsmallest(hapset[i].strand2[w]))
 
             # find optimal breakpoint if there is one
             _, bkpts = continue_haplotype(Xwi, compressed_Hunique, 
