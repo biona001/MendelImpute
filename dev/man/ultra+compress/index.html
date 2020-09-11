@@ -7,67 +7,68 @@ using VCFTools
 tgtfile = &quot;target.chr22.typedOnly.masked.vcf.gz&quot;
 reffile = &quot;ref.chr22.maxd1000.excludeTarget.jlso&quot;
 outfile = &quot;mendel.imputed.jlso&quot; # output file name ends in jlso!
-@time phaseinfo = phase(tgtfile, reffile, outfile=outfile, impute=true, max_d=1000);</code></pre><pre><code class="language-none">Number of threads = 1
+@time phaseinfo = phase(tgtfile, reffile, outfile=outfile);</code></pre><pre><code class="language-none">Number of threads = 1
 Importing reference haplotype data...
 
 
-[32mComputing optimal haplotypes...100%|████████████████████| Time: 0:00:22[39m
+[32mComputing optimal haplotypes...100%|████████████████████| Time: 0:00:23[39m
+[32mPhasing...100%|█████████████████████████████████████████| Time: 0:00:05[39m
 
 
 Total windows = 1634, averaging ~ 508 unique haplotypes per window.
 
 Timings: 
-    Data import                     = 14.2706 seconds
-        import target data             = 3.27572 seconds
-        import compressed haplotypes   = 10.9948 seconds
-    Computing haplotype pair        = 22.7159 seconds
-        BLAS3 mul! to get M and N      = 1.00284 seconds per thread
-        haplopair search               = 18.0964 seconds per thread
-        initializing missing           = 0.095897 seconds per thread
-        allocating and viewing         = 0.310543 seconds per thread
-        index conversion               = 0.00992562 seconds per thread
-    Phasing by win-win intersection = 1.30819 seconds
-        Window-by-window intersection  = 0.525698 seconds per thread
-        Breakpoint search              = 0.275337 seconds per thread
-        Recording result               = 0.0496237 seconds per thread
-    Imputation                     = 2.84315 seconds
-        Imputing missing               = 0.0505533 seconds
-        Writing to file                = 2.7926 seconds
+    Data import                     = 14.5022 seconds
+        import target data             = 3.87545 seconds
+        import compressed haplotypes   = 10.6268 seconds
+    Computing haplotype pair        = 23.5375 seconds
+        BLAS3 mul! to get M and N      = 1.02915 seconds per thread
+        haplopair search               = 18.3499 seconds per thread
+        initializing missing           = 0.100449 seconds per thread
+        allocating and viewing         = 0.286666 seconds per thread
+        index conversion               = 0.00989394 seconds per thread
+    Phasing by win-win intersection = 5.48704 seconds
+        Window-by-window intersection  = 0.552811 seconds per thread
+        Breakpoint search              = 3.94575 seconds per thread
+        Recording result               = 0.0102354 seconds per thread
+    Imputation                     = 3.7252 seconds
+        Imputing missing               = 0.140427 seconds
+        Writing to file                = 3.58477 seconds
 
-    Total time                      = 41.2741 seconds
+    Total time                      = 47.4236 seconds
 
- 58.892784 seconds (137.79 M allocations: 7.481 GiB, 5.92% gc time)</code></pre><p>The object saved to <code>mendel.imputed.jlso</code> is literally the <code>phaseinfo</code> variable. We can inspect its element:</p><pre><code class="language-julia"># look at sample 1&#39;s haplotype segments
+ 62.687155 seconds (127.92 M allocations: 7.048 GiB, 4.93% gc time)</code></pre><p>The object saved to <code>mendel.imputed.jlso</code> is literally the <code>phaseinfo</code> variable. We can inspect its element:</p><pre><code class="language-julia"># look at sample 1&#39;s haplotype segments
 haplotype_labels = phaseinfo[1].strand1.haplotypelabel # strand1
 haplotype_start = phaseinfo[1].strand1.start # strand1
-[haplotype_start haplotype_labels]</code></pre><pre><code class="language-none">547×2 Array{Int64,2}:
+[haplotype_start haplotype_labels]</code></pre><pre><code class="language-none">545×2 Array{Int64,2}:
       1  4119
     236   887
     423   272
     622    12
-    754   124
-    802     4
+    741   124
+    792     4
     824    24
-    968  1282
-   1125  1741
+    944  1282
+   1116  1741
    1202  4543
    1691  1198
    3031    22
    3521    18
       ⋮  
  411702   877
- 412362    74
- 413734  3849
+ 412185    74
+ 413733  3849
  413868   248
- 414456    31
+ 414371    31
  414552  3187
  414989  4481
  415807     5
- 416108   143
- 416353  1276
- 416844    71
- 417084   311</code></pre><h2 id="Loading"><a class="docs-heading-anchor" href="#Loading">Loading</a><a id="Loading-1"></a><a class="docs-heading-anchor-permalink" href="#Loading" title="Permalink"></a></h2><p>The function <a href="https://biona001.github.io/MendelImpute/dev/man/api/#MendelImpute.convert_compressed">convert_compressed</a> will load the ultra-compressed data into genotype matrices and the original <code>phaseinfo</code> data structure. </p><p><strong>Note: Decompressing requires loading the original haplotype reference panel.</strong> </p><pre><code class="language-julia">tgtfile = &quot;mendel.imputed.jlso&quot; # ultra-compressed genotypes after phasing &amp; imputation
+ 415965   143
+ 416352  1276
+ 416744    71
+ 417014   311</code></pre><h2 id="Loading"><a class="docs-heading-anchor" href="#Loading">Loading</a><a id="Loading-1"></a><a class="docs-heading-anchor-permalink" href="#Loading" title="Permalink"></a></h2><p>The function <a href="https://biona001.github.io/MendelImpute/dev/man/api/#MendelImpute.convert_compressed">convert_compressed</a> will load the ultra-compressed data into genotype matrices and the original <code>phaseinfo</code> data structure. </p><p><strong>Note: Decompressing requires loading the original haplotype reference panel.</strong> </p><pre><code class="language-julia">tgtfile = &quot;mendel.imputed.jlso&quot; # ultra-compressed genotypes after phasing &amp; imputation
 reffile = &quot;ref.chr22.excludeTarget.vcf.gz&quot; # original haplotype reference file
-X1, X2, phaseinfo, sampleID, H = convert_compressed(Float64, tgtfile, reffile);</code></pre><pre><code class="language-none">[32mimporting reference data...100%|████████████████████████| Time: 0:01:52[39m</code></pre><p>Check this compression protocol exhibit same error rate with <a href="https://biona001.github.io/MendelImpute/dev/man/Phasing+and+Imputation/#Step-4:-%28only-for-simulated-data%29-check-imputation-accuracy">standard VCF compression</a>. Note that <code>X1</code>, <code>X2</code>, and <code>H</code> are transposed. </p><pre><code class="language-julia">X_truth  = convert_gt(Float64, &quot;target.chr22.full.vcf.gz&quot;) # import true genotypes
+X1, X2, phaseinfo, sampleID, H = convert_compressed(Float64, tgtfile, reffile);</code></pre><pre><code class="language-none">[32mimporting reference data...100%|████████████████████████| Time: 0:01:55[39m</code></pre><p>Check this compression protocol exhibit same error rate with <a href="https://biona001.github.io/MendelImpute/dev/man/Phasing+and+Imputation/#Step-4:-%28only-for-simulated-data%29-check-imputation-accuracy">standard VCF compression</a>. Note that <code>X1</code>, <code>X2</code>, and <code>H</code> are transposed. </p><pre><code class="language-julia">X_truth  = convert_gt(Float64, &quot;target.chr22.full.vcf.gz&quot;) # import true genotypes
 X_mendel = (X1 + X2)&#39; # transpose X1 and X2
 n, p = size(X_mendel)
-println(&quot;error overall = $(sum(X_mendel .!= X_truth) / n / p)&quot;)</code></pre><pre><code class="language-none">error overall = 0.005397602533930585</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../painting/">« Estimating ancestry</a><a class="docs-footer-nextpage" href="../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 10 September 2020 22:36">Thursday 10 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+println(&quot;error overall = $(sum(X_mendel .!= X_truth) / n / p)&quot;)</code></pre><pre><code class="language-none">error overall = 0.00527504782243333</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../painting/">« Estimating ancestry</a><a class="docs-footer-nextpage" href="../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 11 September 2020 05:07">Friday 11 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
